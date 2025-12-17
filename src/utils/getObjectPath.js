@@ -14,6 +14,7 @@ function getPath(path) {
   const NE = 'NewExpression'
   const CE = 'CallExpression'
   const TSAE = 'TSAsExpression'
+  const TSEDD = 'ExportDefaultDeclaration'
 
   if (path.type === OP && path.parent.type === OE) {
     return getPath(path.parentPath)
@@ -84,6 +85,22 @@ function getPath(path) {
   }
   if (path.type === TSAE && path.parent.type === VD) {
     return path.parent.id.name
+  }
+
+  // TypeScript: export default
+  /* example
+  export default {
+    a: {
+        b: {
+            c: 1
+        }
+      }
+  }
+  */
+  if (
+    path.type === OE && path.parent.type === TSEDD
+  ) {
+    return ''
   }
 }
 
