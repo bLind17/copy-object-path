@@ -1,6 +1,10 @@
 const parser = require('@babel/parser')
 const traverse = require('@babel/traverse').default
 
+function joinPaths(base, key) {
+  return base ? `${base}.${key}` : key
+}
+
 // eslint-disable-next-line max-statements
 function getPath(path) {
   const OP = 'ObjectProperty'
@@ -10,19 +14,20 @@ function getPath(path) {
   const NE = 'NewExpression'
   const CE = 'CallExpression'
   const TSAE = 'TSAsExpression'
+  const TSEDD = 'ExportDefaultDeclaration'
 
   if (path.type === OP && path.parent.type === OE) {
     return getPath(path.parentPath)
   }
   if (path.type === OE && path.parent.type === OP) {
-    return getPath(path.parentPath) + '.' + path.parent.key.name
+    return joinPaths(getPath(path.parentPath), path.parent.key.name)
   }
   // Array index
   if (path.type === OE && path.parent.type === AE) {
     return `${getPath(path.parentPath)}[${path.key}]`
   }
   if (path.type === AE && path.parent.type === OP) {
-    return getPath(path.parentPath) + '.' + path.parent.key.name
+    return joinPaths(getPath(path.parentPath), path.parent.key.name)
   }
 
   // function call
@@ -81,6 +86,22 @@ function getPath(path) {
   if (path.type === TSAE && path.parent.type === VD) {
     return path.parent.id.name
   }
+
+  // TypeScript: export default
+  /* example
+  export default {
+    a: {
+        b: {
+            c: 1
+        }
+      }
+  }
+  */
+  if (
+    path.type === OE && path.parent.type === TSEDD
+  ) {
+    return ''
+  }
 }
 
 /**
@@ -109,13 +130,13 @@ module.exports = function getObjectPath(code, row, column, isFinally) {
       if (isNodeValid && isColumnInRange) {
         if (node.type === 'Identifier' && parentPath.type !== 'ObjectMethod') {
           // @ts-ignore
-          path = getPath(parentPath) + '.' + node.name
+          path = joinPaths(getPath(parentPath), node.name)
         }
 
         // @ts-ignore
         if (node.key && node.key.type === 'Identifier') {
           // @ts-ignore
-          path = getPath(parentPath) + '.' + node.key.name
+          path = joinPaths(getPath(parentPath), node.key.name)
         }
 
         /* example
