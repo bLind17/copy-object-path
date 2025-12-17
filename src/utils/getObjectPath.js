@@ -1,6 +1,10 @@
 const parser = require('@babel/parser')
 const traverse = require('@babel/traverse').default
 
+function joinPaths(base, key) {
+  return base ? `${base}.${key}` : key
+}
+
 // eslint-disable-next-line max-statements
 function getPath(path) {
   const OP = 'ObjectProperty'
@@ -15,14 +19,14 @@ function getPath(path) {
     return getPath(path.parentPath)
   }
   if (path.type === OE && path.parent.type === OP) {
-    return getPath(path.parentPath) + '.' + path.parent.key.name
+    return joinPaths(getPath(path.parentPath), path.parent.key.name)
   }
   // Array index
   if (path.type === OE && path.parent.type === AE) {
     return `${getPath(path.parentPath)}[${path.key}]`
   }
   if (path.type === AE && path.parent.type === OP) {
-    return getPath(path.parentPath) + '.' + path.parent.key.name
+    return joinPaths(getPath(path.parentPath), path.parent.key.name)
   }
 
   // function call
@@ -109,13 +113,13 @@ module.exports = function getObjectPath(code, row, column, isFinally) {
       if (isNodeValid && isColumnInRange) {
         if (node.type === 'Identifier' && parentPath.type !== 'ObjectMethod') {
           // @ts-ignore
-          path = getPath(parentPath) + '.' + node.name
+          path = joinPaths(getPath(parentPath), node.name)
         }
 
         // @ts-ignore
         if (node.key && node.key.type === 'Identifier') {
           // @ts-ignore
-          path = getPath(parentPath) + '.' + node.key.name
+          path = joinPaths(getPath(parentPath), node.key.name)
         }
 
         /* example
